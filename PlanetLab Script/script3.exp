@@ -1,0 +1,118 @@
+#!/usr/bin/expect
+
+## This srcipt connect to a set of planetLab nodes in nodelist file iteratively
+## On each node it copies the Java package and installls it.
+## The it copies the Runnable Jar and Configuratio File in goodteamtest folder and runs the game
+set loginUser "darmstadtple_p2plab"
+set loginPassword "goodteam"
+set mgmtServerAddress "planetlab01.tkn.tu-berlin.de"
+
+## Expect Parameters
+set timeout 20
+set successMsg "Status: Success"
+set failureMsg "Status: Failure"
+
+set f [open "nodelist.txt"]
+set hosts [split [read $f] "\n"]
+close $f
+
+foreach host $hosts {
+
+	## ------------- connection and creating SSH session and making Folder
+
+	spawn ssh -i GoodTeam $loginUser@$host
+
+	expect {
+	  timeout { send_user "\nNot first Time\n";}
+	  "yes" {send "yes\r"}
+	}
+
+	expect {
+	  timeout { send_user "\nFailed to get password prompt\n"; exit 1 }
+	  eof { send_user "\nSSH failure for $host\n"; exit 1 }
+	  "passphrase" {send "$loginPassword\r"}
+	  
+	}
+
+	expect {
+	  timeout { send_user "\nLogin failed. Password incorrect.\n"; exit 1}
+	  "$ "
+	}
+
+	send_user "\nCreating Test Dir\n"
+	send "mkdir -p goodteamtest\r"
+
+
+	expect {
+	  timeout { send_user "\nLogin failed. Password incorrect.\n"; exit 1}
+	  "$ "
+	}
+
+	send "ls\r"
+
+	send "exit\r"
+
+	## ------------- Moving Folder goodteamtest to node
+
+	spawn scp -i GoodTeam -r ./goodteamtest $loginUser@$host:~/
+
+	expect {
+
+	  timeout { send_user "\nFailed to get password prompt\n"; exit 1 }
+	  eof { send_user "\nSSH failure for $host\n"; exit 1 }
+	  "passphrase"
+	}
+
+	send "$loginPassword\r"
+	sleep 25
+
+
+	## ------------- Creating SSH ssession and Checking Java Installed if not installed .. Install Java
+	spawn ssh -i GoodTeam $loginUser@$host
+
+	expect {
+	  timeout { send_user "\nFailed to get password prompt\n"; exit 1 }
+	  eof { send_user "\nSSH failure for $host\n"; exit 1 }
+	  "passphrase"
+	}
+
+	send "$loginPassword\r"
+
+	expect {
+	  timeout { send_user "\nLogin failed. Password incorrect.\n"; exit 1}
+	  "$ "
+	}
+
+	send "cd goodteamtest\r"
+
+	expect {
+	  timeout { send_user "\nLogin failed. Password incorrect.\n"; exit 1}
+	  "$ "
+	}
+
+	send "java -version\r"
+
+	expect {
+	  timeout { send_user "\nLogin failed. Password incorrect.\n"; exit 1}
+	  "command not found" {send "sudo rpm -ivh jre-7u60-linux-i586.rpm\r"; sleep 20;}
+	  "java version" {send_user "\nJava  Already Installed\n"; }
+	}
+
+	expect {
+	  timeout { send_user "\nLogin failed. Password incorrect.\n"; exit 1}
+	  "$ "
+	}
+	send "java -jar Bombermine.jar\r"
+	expect {
+	  timeout { send_user "\nGame Not Started\n"; exit 1}
+	  "bomb Time" {send_user "\n----Game  Started----\n";}
+	  
+	}
+
+	sleep 2
+
+
+
+}
+close
+

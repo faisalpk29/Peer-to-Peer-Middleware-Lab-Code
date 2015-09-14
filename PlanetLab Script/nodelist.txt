@@ -1,0 +1,5 @@
+planetlab1.utt.fr
+iraplab2.iralab.uni-karlsruhe.de
+planetlab01.tkn.tu-berlin.de
+ple4.ipv6.lip6.fr
+host1.planetlab.informatik.tu-darmstadt.de
